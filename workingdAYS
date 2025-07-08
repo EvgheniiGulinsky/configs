@@ -6,38 +6,55 @@ import {
   FormControlLabel,
   Checkbox,
   Grid,
-  Paper,
+  Button,
 } from '@mui/material';
 import { LocalizationProvider, TimePicker } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs, { Dayjs } from 'dayjs';
 
+type WorkDayInput = {
+  dayOfWeek: 'MON' | 'TUE' | 'WED' | 'THU' | 'FRI' | 'SAT' | 'SUN';
+  workFrom: string;
+  workTill: string;
+};
+
 type DaySchedule = {
-  day: string;
+  dayLabel: string;
+  dayOfWeek: WorkDayInput['dayOfWeek'];
   from: Dayjs;
   to: Dayjs;
   isDayOff: boolean;
 };
 
-const daysOfWeek: string[] = [
-  'понедельник',
-  'вторник',
-  'среда',
-  'четверг',
-  'пятница',
-  'суббота',
-  'воскресенье',
-];
+const daysMap: Record<WorkDayInput['dayOfWeek'], { label: string; order: number }> = {
+  MON: { label: 'понедельник', order: 0 },
+  TUE: { label: 'вторник', order: 1 },
+  WED: { label: 'среда', order: 2 },
+  THU: { label: 'четверг', order: 3 },
+  FRI: { label: 'пятница', order: 4 },
+  SAT: { label: 'суббота', order: 5 },
+  SUN: { label: 'воскресенье', order: 6 },
+};
 
-export default function WeeklyScheduleEditor() {
-  const [schedule, setSchedule] = useState<DaySchedule[]>(
-    daysOfWeek.map((day) => ({
-      day,
-      from: dayjs().hour(9).minute(0),
-      to: dayjs().hour(18).minute(0),
-      isDayOff: day === 'суббота' || day === 'воскресенье',
-    }))
-  );
+type Props = {
+  workDaysSchedule: WorkDayInput[];
+};
+
+export default function WeeklyScheduleEditor({ workDaysSchedule }: Props) {
+  const fullSchedule: DaySchedule[] = Object.entries(daysMap)
+    .sort((a, b) => a[1].order - b[1].order)
+    .map(([dayOfWeek, { label }]) => {
+      const match = workDaysSchedule.find((d) => d.dayOfWeek === dayOfWeek);
+      return {
+        dayOfWeek: dayOfWeek as WorkDayInput['dayOfWeek'],
+        dayLabel: label,
+        from: match ? dayjs(match.workFrom, 'HH:mm:ss') : dayjs('09:00:00', 'HH:mm:ss'),
+        to: match ? dayjs(match.workTill, 'HH:mm:ss') : dayjs('18:00:00', 'HH:mm:ss'),
+        isDayOff: !match,
+      };
+    });
+
+  const [schedule, setSchedule] = useState<DaySchedule[]>(fullSchedule);
 
   const handleChange = (
     index: number,
@@ -51,6 +68,30 @@ export default function WeeklyScheduleEditor() {
     );
   };
 
+  const handleSave = async () => {
+    const workingDays: WorkDayInput[] = schedule
+      .filter((item) => !item.isDayOff)
+      .map((item) => ({
+        dayOfWeek: item.dayOfWeek,
+        workFrom: item.from.format('HH:mm:ss'),
+        workTill: item.to.format('HH:mm:ss'),
+      }));
+
+    console.log('Сохраняем рабочие дни:', workingDays);
+
+    try {
+      await fetch('/api/working-days', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(workingDays),
+      });
+      alert('Рабочие дни сохранены!');
+    } catch (err) {
+      console.error('Ошибка при сохранении:', err);
+      alert('Ошибка при сохранении рабочих дней');
+    }
+  };
+
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <Box>
@@ -58,7 +99,6 @@ export default function WeeklyScheduleEditor() {
           Расписание по дням недели
         </Typography>
 
-        {/* Заголовки */}
         <Grid container spacing={1} alignItems="center" mb={1}>
           <Grid item sx={{ width: 140 }}><strong>День</strong></Grid>
           <Grid item sx={{ width: 140 }}><strong>С</strong></Grid>
@@ -66,17 +106,16 @@ export default function WeeklyScheduleEditor() {
           <Grid item sx={{ width: 140 }}><strong>Выходной</strong></Grid>
         </Grid>
 
-        {/* Строки расписания */}
         <Stack spacing={1}>
           {schedule.map((item, index) => (
             <Grid
               container
               spacing={1}
               alignItems="center"
-              key={item.day}
+              key={item.dayOfWeek}
               sx={{ flexWrap: 'nowrap' }}
             >
-              <Grid item sx={{ width: 140 }}>{item.day}</Grid>
+              <Grid item sx={{ width: 140 }}>{item.dayLabel}</Grid>
 
               <Grid item sx={{ width: 140 }}>
                 <TimePicker
@@ -112,6 +151,12 @@ export default function WeeklyScheduleEditor() {
             </Grid>
           ))}
         </Stack>
+
+        <Box mt={3}>
+          <Button variant="contained" onClick={handleSave}>
+            СОХРАНИТЬ рабочие дни
+          </Button>
+        </Box>
       </Box>
     </LocalizationProvider>
   );
