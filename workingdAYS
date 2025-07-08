@@ -6,6 +6,7 @@ import {
   FormControlLabel,
   Checkbox,
   Grid,
+  Paper,
 } from '@mui/material';
 import { LocalizationProvider, TimePicker } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
@@ -57,36 +58,45 @@ export default function WeeklyScheduleEditor() {
           Расписание по дням недели
         </Typography>
 
-        <Grid container spacing={2}>
-          <Grid item xs={3}><strong>День</strong></Grid>
-          <Grid item xs={3}><strong>С</strong></Grid>
-          <Grid item xs={3}><strong>По</strong></Grid>
-          <Grid item xs={3}><strong>Выходной</strong></Grid>
+        {/* Заголовки */}
+        <Grid container spacing={1} alignItems="center" mb={1}>
+          <Grid item sx={{ width: 140 }}><strong>День</strong></Grid>
+          <Grid item sx={{ width: 140 }}><strong>С</strong></Grid>
+          <Grid item sx={{ width: 140 }}><strong>По</strong></Grid>
+          <Grid item sx={{ width: 140 }}><strong>Выходной</strong></Grid>
+        </Grid>
 
+        {/* Строки расписания */}
+        <Stack spacing={1}>
           {schedule.map((item, index) => (
-            <React.Fragment key={item.day}>
-              <Grid item xs={3}>
-                {item.day}
-              </Grid>
-              <Grid item xs={3}>
+            <Grid
+              container
+              spacing={1}
+              alignItems="center"
+              key={item.day}
+              sx={{ flexWrap: 'nowrap' }}
+            >
+              <Grid item sx={{ width: 140 }}>{item.day}</Grid>
+
+              <Grid item sx={{ width: 140 }}>
                 <TimePicker
                   value={item.from}
-                  onChange={(newValue) =>
-                    handleChange(index, 'from', newValue as Dayjs)
-                  }
+                  onChange={(val) => handleChange(index, 'from', val as Dayjs)}
                   disabled={item.isDayOff}
+                  slotProps={{ textField: { fullWidth: true, size: 'small' } }}
                 />
               </Grid>
-              <Grid item xs={3}>
+
+              <Grid item sx={{ width: 140 }}>
                 <TimePicker
                   value={item.to}
-                  onChange={(newValue) =>
-                    handleChange(index, 'to', newValue as Dayjs)
-                  }
+                  onChange={(val) => handleChange(index, 'to', val as Dayjs)}
                   disabled={item.isDayOff}
+                  slotProps={{ textField: { fullWidth: true, size: 'small' } }}
                 />
               </Grid>
-              <Grid item xs={3}>
+
+              <Grid item sx={{ width: 140 }}>
                 <FormControlLabel
                   control={
                     <Checkbox
@@ -99,9 +109,9 @@ export default function WeeklyScheduleEditor() {
                   label={item.isDayOff ? 'да' : 'нет'}
                 />
               </Grid>
-            </React.Fragment>
+            </Grid>
           ))}
-        </Grid>
+        </Stack>
       </Box>
     </LocalizationProvider>
   );
