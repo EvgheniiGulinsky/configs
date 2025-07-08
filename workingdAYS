@@ -1,0 +1,108 @@
+import React, { useState } from 'react';
+import {
+  Box,
+  Stack,
+  Typography,
+  FormControlLabel,
+  Checkbox,
+  Grid,
+} from '@mui/material';
+import { LocalizationProvider, TimePicker } from '@mui/x-date-pickers';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import dayjs, { Dayjs } from 'dayjs';
+
+type DaySchedule = {
+  day: string;
+  from: Dayjs;
+  to: Dayjs;
+  isDayOff: boolean;
+};
+
+const daysOfWeek: string[] = [
+  'понедельник',
+  'вторник',
+  'среда',
+  'четверг',
+  'пятница',
+  'суббота',
+  'воскресенье',
+];
+
+export default function WeeklyScheduleEditor() {
+  const [schedule, setSchedule] = useState<DaySchedule[]>(
+    daysOfWeek.map((day) => ({
+      day,
+      from: dayjs().hour(9).minute(0),
+      to: dayjs().hour(18).minute(0),
+      isDayOff: day === 'суббота' || day === 'воскресенье',
+    }))
+  );
+
+  const handleChange = (
+    index: number,
+    key: 'from' | 'to' | 'isDayOff',
+    value: Dayjs | boolean
+  ) => {
+    setSchedule((prev) =>
+      prev.map((item, i) =>
+        i === index ? { ...item, [key]: value } : item
+      )
+    );
+  };
+
+  return (
+    <LocalizationProvider dateAdapter={AdapterDayjs}>
+      <Box>
+        <Typography variant="h6" mb={2}>
+          Расписание по дням недели
+        </Typography>
+
+        <Grid container spacing={2}>
+          <Grid item xs={3}><strong>День</strong></Grid>
+          <Grid item xs={3}><strong>С</strong></Grid>
+          <Grid item xs={3}><strong>По</strong></Grid>
+          <Grid item xs={3}><strong>Выходной</strong></Grid>
+
+          {schedule.map((item, index) => (
+            <React.Fragment key={item.day}>
+              <Grid item xs={3}>
+                {item.day}
+              </Grid>
+              <Grid item xs={3}>
+                <TimePicker
+                  value={item.from}
+                  onChange={(newValue) =>
+                    handleChange(index, 'from', newValue as Dayjs)
+                  }
+                  disabled={item.isDayOff}
+                />
+              </Grid>
+              <Grid item xs={3}>
+                <TimePicker
+                  value={item.to}
+                  onChange={(newValue) =>
+                    handleChange(index, 'to', newValue as Dayjs)
+                  }
+                  disabled={item.isDayOff}
+                />
+              </Grid>
+              <Grid item xs={3}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={item.isDayOff}
+                      onChange={(e) =>
+                        handleChange(index, 'isDayOff', e.target.checked)
+                      }
+                    />
+                  }
+                  label={item.isDayOff ? 'да' : 'нет'}
+                />
+              </Grid>
+            </React.Fragment>
+          ))}
+        </Grid>
+      </Box>
+    </LocalizationProvider>
+  );
+}
