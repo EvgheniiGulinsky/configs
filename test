@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import axios from "axios";
 import {
   Box,
   Button,
@@ -23,68 +24,51 @@ type User = {
   email: string;
 };
 
-const initialUsers: User[] = [
-  { id: 1, name: "Иван Иванов", email: "ivan@example.com" },
-  { id: 2, name: "Анна Смирнова", email: "anna@example.com" },
-];
-
 export default function UserTable() {
-  const [users, setUsers] = useState<User[]>(initialUsers);
+  const [users, setUsers] = useState<User[]>([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-
   const [formName, setFormName] = useState("");
   const [formEmail, setFormEmail] = useState("");
 
-  const handleOpenAddDrawer = () => {
-    setCurrentUser(null);
-    setFormName("");
-    setFormEmail("");
-    setDrawerOpen(true);
-  };
+  // Загрузка пользователей при первом рендере
+  React.useEffect(() => {
+    axios.get("/api/users").then((res) => {
+      setUsers(res.data);
+    });
+  }, []);
 
-  const handleOpenEditDrawer = (user: User) => {
-    setCurrentUser(user);
-    setFormName(user.name);
-    setFormEmail(user.email);
-    setDrawerOpen(true);
-  };
-
-  const handleSubmit = () => {
+  const handleAddUser = async () => {
     if (!formName.trim() || !formEmail.trim()) return;
 
-    if (currentUser) {
-      // Редактирование
-      setUsers((prev) =>
-        prev.map((u) =>
-          u.id === currentUser.id ? { ...u, name: formName, email: formEmail } : u
-        )
-      );
-    } else {
-      // Добавление
-      const newUser = {
-        id: Date.now(),
+    try {
+      const res = await axios.post("/api/users", {
         name: formName,
         email: formEmail,
-      };
-      setUsers((prev) => [...prev, newUser]);
-    }
+      });
 
-    setDrawerOpen(false);
-    setFormName("");
-    setFormEmail("");
-    setCurrentUser(null);
+      setUsers((prev) => [...prev, res.data]);
+      setFormName("");
+      setFormEmail("");
+      setDrawerOpen(false);
+    } catch (error) {
+      console.error("Ошибка при добавлении пользователя", error);
+    }
   };
 
-  const handleDeleteUser = (id: number) => {
-    setUsers((prev) => prev.filter((user) => user.id !== id));
+  const handleDeleteUser = async (id: number) => {
+    try {
+      await axios.delete(`/api/users/${id}`);
+      setUsers((prev) => prev.filter((user) => user.id !== id));
+    } catch (error) {
+      console.error("Ошибка при удалении пользователя", error);
+    }
   };
 
   return (
     <Box p={4}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
         <Typography variant="h6">Пользователи</Typography>
-        <Button variant="contained" onClick={handleOpenAddDrawer}>
+        <Button variant="contained" onClick={() => setDrawerOpen(true)}>
           Добавить пользователя
         </Button>
       </Box>
@@ -104,7 +88,7 @@ export default function UserTable() {
                 <TableCell>{user.name}</TableCell>
                 <TableCell>{user.email}</TableCell>
                 <TableCell align="right">
-                  <IconButton onClick={() => handleOpenEditDrawer(user)} aria-label="Редактировать">
+                  <IconButton onClick={() => {}} aria-label="Редактировать">
                     <EditIcon />
                   </IconButton>
                   <IconButton
@@ -125,11 +109,10 @@ export default function UserTable() {
         anchor="right"
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
+        PaperProps={{ sx: { width: 500 } }} // ← ширина дровера
       >
-        <Box p={3} width={300}>
-          <Typography variant="h6" mb={2}>
-            {currentUser ? "Редактировать пользователя" : "Новый пользователь"}
-          </Typography>
+        <Box p={3}>
+          <Typography variant="h6" mb={2}>Новый пользователь</Typography>
           <TextField
             label="Имя"
             fullWidth
@@ -144,8 +127,8 @@ export default function UserTable() {
             value={formEmail}
             onChange={(e) => setFormEmail(e.target.value)}
           />
-          <Button variant="contained" fullWidth onClick={handleSubmit}>
-            {currentUser ? "Сохранить изменения" : "Добавить"}
+          <Button variant="contained" fullWidth onClick={handleAddUser}>
+            Добавить
           </Button>
         </Box>
       </Drawer>
