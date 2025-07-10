@@ -1,162 +1,154 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Box,
-  Stack,
-  Typography,
-  IconButton,
   Button,
-  Radio,
-  RadioGroup,
-  FormControlLabel,
-} from '@mui/material';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
-import dayjs, { Dayjs } from 'dayjs';
-import DeleteIcon from '@mui/icons-material/Delete';
-import AddIcon from '@mui/icons-material/Add';
+  Drawer,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TextField,
+  Typography,
+  Paper,
+  IconButton,
+} from "@mui/material";
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
 
-type WorkingDay = {
-  dateFrom: string;
-  dateTo: string;
+type User = {
+  id: number;
+  name: string;
+  email: string;
 };
 
-export default function WorkingDaysPicker() {
-  const [workingDays, setWorkingDays] = useState<WorkingDay[]>([]);
-  const [selectedIndex, setSelectedIndex] = useState<number>(-1);
-  const [newInterval, setNewInterval] = useState<WorkingDay | null>(null);
+const initialUsers: User[] = [
+  { id: 1, name: "Иван Иванов", email: "ivan@example.com" },
+  { id: 2, name: "Анна Смирнова", email: "anna@example.com" },
+];
 
-  const handleDateChange = (key: 'dateFrom' | 'dateTo', value: Dayjs | null) => {
-    if (!newInterval || !value) return;
-    setNewInterval({ ...newInterval, [key]: value.format('YYYY-MM-DD') });
+export default function UserTable() {
+  const [users, setUsers] = useState<User[]>(initialUsers);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+
+  const [formName, setFormName] = useState("");
+  const [formEmail, setFormEmail] = useState("");
+
+  const handleOpenAddDrawer = () => {
+    setCurrentUser(null);
+    setFormName("");
+    setFormEmail("");
+    setDrawerOpen(true);
   };
 
-  const handleAddClick = () => {
-    setNewInterval({
-      dateFrom: dayjs().format('YYYY-MM-DD'),
-      dateTo: dayjs().add(1, 'day').format('YYYY-MM-DD'),
-    });
+  const handleOpenEditDrawer = (user: User) => {
+    setCurrentUser(user);
+    setFormName(user.name);
+    setFormEmail(user.email);
+    setDrawerOpen(true);
   };
 
-  const handleSaveClick = () => {
-    if (!newInterval) return;
-    if (dayjs(newInterval.dateFrom).isAfter(dayjs(newInterval.dateTo))) {
-      alert('Дата начала не может быть позже даты окончания');
-      return;
+  const handleSubmit = () => {
+    if (!formName.trim() || !formEmail.trim()) return;
+
+    if (currentUser) {
+      // Редактирование
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.id === currentUser.id ? { ...u, name: formName, email: formEmail } : u
+        )
+      );
+    } else {
+      // Добавление
+      const newUser = {
+        id: Date.now(),
+        name: formName,
+        email: formEmail,
+      };
+      setUsers((prev) => [...prev, newUser]);
     }
 
-    const updated = [...workingDays, newInterval];
-    setWorkingDays(updated);
-    setSelectedIndex(updated.length - 1);
-    setNewInterval(null);
+    setDrawerOpen(false);
+    setFormName("");
+    setFormEmail("");
+    setCurrentUser(null);
   };
 
-  const handleCancelClick = () => {
-    setNewInterval(null);
-  };
-
-  const handleRemove = (index: number) => {
-    const updated = workingDays.filter((_, i) => i !== index);
-    setWorkingDays(updated);
-    if (selectedIndex === index) {
-      setSelectedIndex(-1);
-    } else if (selectedIndex > index) {
-      setSelectedIndex((prev) => prev - 1);
-    }
+  const handleDeleteUser = (id: number) => {
+    setUsers((prev) => prev.filter((user) => user.id !== id));
   };
 
   return (
-    <LocalizationProvider dateAdapter={AdapterDayjs}>
-      <Stack spacing={3}>
-        <Typography variant="h6">Рабочие интервалы</Typography>
-
-        <RadioGroup
-          value={selectedIndex}
-          onChange={(e) => setSelectedIndex(Number(e.target.value))}
-        >
-          {workingDays.map((item, index) => (
-            <Box
-              key={index}
-              display="flex"
-              alignItems="center"
-              gap={2}
-              sx={{ flexWrap: 'wrap' }}
-            >
-              <FormControlLabel
-                value={index}
-                control={<Radio />}
-                label=""
-              />
-
-              <DatePicker
-                label="Дата с"
-                value={dayjs(item.dateFrom)}
-                readOnly
-              />
-              <DatePicker
-                label="Дата по"
-                value={dayjs(item.dateTo)}
-                readOnly
-              />
-
-              <IconButton
-                color="error"
-                onClick={() => handleRemove(index)}
-                aria-label="удалить"
-              >
-                <DeleteIcon />
-              </IconButton>
-            </Box>
-          ))}
-        </RadioGroup>
-
-        {/* Новый редактируемый интервал */}
-        {newInterval && (
-          <Box
-            display="flex"
-            alignItems="center"
-            gap={2}
-            sx={{ flexWrap: 'wrap' }}
-          >
-            <DatePicker
-              label="Дата с"
-              value={dayjs(newInterval.dateFrom)}
-              onChange={(value) => handleDateChange('dateFrom', value)}
-            />
-            <DatePicker
-              label="Дата по"
-              value={dayjs(newInterval.dateTo)}
-              onChange={(value) => handleDateChange('dateTo', value)}
-            />
-
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={handleSaveClick}
-            >
-              Сохранить
-            </Button>
-
-            <Button
-              variant="outlined"
-              color="inherit"
-              onClick={handleCancelClick}
-            >
-              Отменить
-            </Button>
-          </Box>
-        )}
-
-        {/* Кнопка добавления */}
-        <Button
-          variant="outlined"
-          startIcon={<AddIcon />}
-          onClick={handleAddClick}
-          disabled={!!newInterval}
-        >
-          Добавить интервал
+    <Box p={4}>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+        <Typography variant="h6">Пользователи</Typography>
+        <Button variant="contained" onClick={handleOpenAddDrawer}>
+          Добавить пользователя
         </Button>
-      </Stack>
-    </LocalizationProvider>
+      </Box>
+
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Имя</TableCell>
+              <TableCell>Email</TableCell>
+              <TableCell align="right">Действия</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {users.map((user) => (
+              <TableRow key={user.id}>
+                <TableCell>{user.name}</TableCell>
+                <TableCell>{user.email}</TableCell>
+                <TableCell align="right">
+                  <IconButton onClick={() => handleOpenEditDrawer(user)} aria-label="Редактировать">
+                    <EditIcon />
+                  </IconButton>
+                  <IconButton
+                    onClick={() => handleDeleteUser(user.id)}
+                    aria-label="Удалить"
+                    color="error"
+                  >
+                    <DeleteIcon />
+                  </IconButton>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      <Drawer
+        anchor="right"
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+      >
+        <Box p={3} width={300}>
+          <Typography variant="h6" mb={2}>
+            {currentUser ? "Редактировать пользователя" : "Новый пользователь"}
+          </Typography>
+          <TextField
+            label="Имя"
+            fullWidth
+            margin="normal"
+            value={formName}
+            onChange={(e) => setFormName(e.target.value)}
+          />
+          <TextField
+            label="Email"
+            fullWidth
+            margin="normal"
+            value={formEmail}
+            onChange={(e) => setFormEmail(e.target.value)}
+          />
+          <Button variant="contained" fullWidth onClick={handleSubmit}>
+            {currentUser ? "Сохранить изменения" : "Добавить"}
+          </Button>
+        </Box>
+      </Drawer>
+    </Box>
   );
 }
